@@ -16,27 +16,42 @@ const routes = {
   },
   '/heroes:post': async (request, response) => {
     // async interator
-    for await (const data of request) {
-      const item = JSON.parse(data);
-      const hero = new Hero(item);
-      
-      const { error, valid } = hero.isValid();
-      if (!valid) {
-        response.writeHead(400, DEFAULT_HEADER);
-        response.write(JSON.stringify({ error: error.join(', ')}));
+    try {
+      for await (const data of request) {
+        const item = JSON.parse(data);
+        const hero = new Hero(item);
+        
+        const { error, valid } = hero.isValid();
+        if (!valid) {
+          response.writeHead(400, DEFAULT_HEADER);
+          response.write(JSON.stringify({ error: error.join(', ')}));
+          return response.end();
+        }
+  
+        const id = await heroService.create(hero);
+        response.writeHead(201, DEFAULT_HEADER)
+        response.write(JSON.stringify({ success: 'User Created with success!!', id}));
+        //só jogamos o return aqui pois sabemos que é um objeto body por requisicao
+        //se fosse um arquivo, que sobe sob demanda
+        // ele poderia entrar mais vezes em um mesmo evento, aí removeriamos o return
         return response.end();
       }
-
-      const id = await heroService.create(hero);
-      response.writeHead(201, DEFAULT_HEADER)
-      response.write(JSON.stringify({ success: 'User Created with success!!', id}));
-
-      return response.end();
+    } catch (error) {
+      return handleError(response)(error)
     }
   },
   default: (request, response) => {
     response.write('Hello again!');
     response.end();
+  }
+}
+
+const handleError = response => {
+  return error => {
+    console.error('deuu ruiiim!', error)
+    response.writeHead(500, DEFAULT_HEADER)
+    response.write(JSON.stringify({ error: 'Internal Server Error!!'}))
+    return response.end();
   }
 }
 const handler = (request, response) => {
@@ -48,7 +63,7 @@ const handler = (request, response) => {
   response.writeHead(200, DEFAULT_HEADER);
 
   const choosen = routes[key] || routes.default;
-  return choosen(request, response);
+  return choosen(request, response).catch(handleError(response));
 }
 
 http.createServer(handler)
