@@ -1,0 +1,11 @@
+const  HeroRepository = require('../repositories/heroRepository');
+const  HeroService = require('../service/heroService');
+
+const { join } = require('path');
+const filename = join(__dirname, '../../database', 'data.json');
+
+const generateInstance = () => {
+
+}
+
+module.exports = { generateInstance }
